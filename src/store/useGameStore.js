@@ -14,36 +14,39 @@ export const useGameStore = create(
     // Game phase
     phase: 'menu', // 'menu', 'playing', 'game-over', 'level-complete'
     stage: 1, // Current stage/level
-    
+
     // Player state
     playerPosition: [0, 1, 0], // [x, y, z]
     playerRotation: [0, 0, 0], // [x, y, z]
     isMoving: false,
-    
+
     // Game objects
     crates: [
       { id: 'crate-1', position: [3, 0.5, 2], isOnPressurePlate: false },
       { id: 'crate-2', position: [-2, 0.5, 3], isOnPressurePlate: false },
       { id: 'crate-3', position: [4, 0.5, -2], isOnPressurePlate: false },
     ],
-    
+
     // Game mechanics
     pressurePlates: [
       { id: 'plate-1', position: [4, 0.1, 4], isPressed: false, doorId: 'door-1' },
       { id: 'plate-2', position: [-4, 0.1, -4], isPressed: false, doorId: 'door-2' },
+      // New button platforms for the puzzle
+      { id: 'button-1', position: [6, 0, 0], isPressed: false, doorId: 'door-1' },
+      { id: 'button-2', position: [-6, 0, 0], isPressed: false, doorId: 'door-1' },
     ],
-    
+
     doors: [
       { id: 'door-1', position: [0, 0, 5], isOpen: false },
       { id: 'door-2', position: [5, 0, 0], isOpen: false },
     ],
-    
+
     // Goal/exit
     goal: { position: [8, 0.5, 8], isReached: false },
-    
+
     // Actions
     start: () => set({ phase: 'playing' }),
-    
+
     restart: () => set({
       phase: 'playing',
       playerPosition: [0, 1, 0],
@@ -63,36 +66,69 @@ export const useGameStore = create(
       ],
       goal: { position: [8, 0.5, 8], isReached: false },
     }),
-    
-    nextStage: () => set((state) => ({ 
+
+    nextStage: () => set((state) => ({
       stage: state.stage + 1,
       phase: 'playing',
       playerPosition: [0, 1, 0],
       playerRotation: [0, 0, 0],
       // Reset other state for the next level
     })),
-    
+
     gameOver: () => set({ phase: 'game-over' }),
-    
+
     completeLevel: () => set({ phase: 'level-complete' }),
-    
+
     // Player movement
     setPlayerPosition: (position) => set({ playerPosition: position }),
-    
+
     setPlayerRotation: (rotation) => set({ playerRotation: rotation }),
-    
+
     setIsMoving: (isMoving) => set({ isMoving }),
-    
+
     // Game mechanics
     updateCratePosition: (id, position) => set((state) => ({
-      crates: state.crates.map((crate) => 
+      crates: state.crates.map((crate) =>
         crate.id === id ? { ...crate, position } : crate
       )
     })),
-    
+
+    // Update a specific pressure plate
+    updatePressurePlate: (id, isPressed) => set((state) => {
+      // Update the specific pressure plate
+      const updatedPressurePlates = state.pressurePlates.map((plate) =>
+        plate.id === id ? { ...plate, isPressed } : plate
+      );
+
+      // Check if all plates for a door are pressed
+      const doorStates = {};
+
+      // Group plates by doorId
+      updatedPressurePlates.forEach(plate => {
+        if (!doorStates[plate.doorId]) {
+          doorStates[plate.doorId] = [];
+        }
+        doorStates[plate.doorId].push(plate.isPressed);
+      });
+
+      // Update doors based on pressure plates
+      const updatedDoors = state.doors.map(door => {
+        // Get all plates for this door
+        const doorPlates = doorStates[door.id] || [];
+        // Door is open if ALL plates for this door are pressed
+        const isOpen = doorPlates.length > 0 && doorPlates.every(isPressed => isPressed);
+        return { ...door, isOpen };
+      });
+
+      return {
+        pressurePlates: updatedPressurePlates,
+        doors: updatedDoors
+      };
+    }),
+
     checkPressurePlates: () => {
       const { crates, pressurePlates, doors } = get();
-      
+
       // Create a new array to track updated pressure plates
       const updatedPressurePlates = pressurePlates.map(plate => {
         // Check if any crate is on this pressure plate
@@ -103,10 +139,10 @@ export const useGameStore = create(
           );
           return distance < 1; // If crate is within 1 unit of the plate
         });
-        
+
         return { ...plate, isPressed };
       });
-      
+
       // Create a new array to track updated doors
       const updatedDoors = doors.map(door => {
         // Find the pressure plate that controls this door
@@ -114,26 +150,26 @@ export const useGameStore = create(
         // Update door state based on pressure plate
         return { ...door, isOpen: controlPlate ? controlPlate.isPressed : door.isOpen };
       });
-      
+
       // Update the state with the new pressure plates and doors
-      set({ 
+      set({
         pressurePlates: updatedPressurePlates,
         doors: updatedDoors
       });
     },
-    
+
     checkGoal: () => {
       const { playerPosition, goal, phase } = get();
-      
+
       if (phase !== 'playing') return;
-      
+
       const distance = Math.sqrt(
         Math.pow(playerPosition[0] - goal.position[0], 2) +
         Math.pow(playerPosition[2] - goal.position[2], 2)
       );
-      
+
       if (distance < 1.5 && !goal.isReached) {
-        set({ 
+        set({
           goal: { ...goal, isReached: true },
           phase: 'level-complete'
         });

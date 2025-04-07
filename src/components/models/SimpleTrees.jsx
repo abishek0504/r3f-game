@@ -9,6 +9,14 @@ export function Tree1({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 })
   // Clone the scene to avoid sharing issues
   const clonedScene = scene.clone()
 
+  // Traverse the cloned scene to enable shadows
+  clonedScene.traverse((node) => {
+    if (node.isMesh) {
+      node.castShadow = true
+      node.receiveShadow = true
+    }
+  })
+
   return (
     <group ref={group} position={position} rotation={rotation} scale={scale} dispose={null}>
       <primitive object={clonedScene} />
@@ -23,6 +31,14 @@ export function Tree2({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 })
 
   // Clone the scene to avoid sharing issues
   const clonedScene = scene.clone()
+
+  // Traverse the cloned scene to enable shadows
+  clonedScene.traverse((node) => {
+    if (node.isMesh) {
+      node.castShadow = true
+      node.receiveShadow = true
+    }
+  })
 
   return (
     <group ref={group} position={position} rotation={rotation} scale={scale} dispose={null}>

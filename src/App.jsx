@@ -16,10 +16,15 @@ const keyboardMap = [
 function App() {
   return (
     <KeyboardControls map={keyboardMap}>
-      <Canvas shadows camera={{ position: [0, 6, 14], fov: 42 }}>
+      <Canvas
+        shadows={{ type: 'PCFShadowMap' }} /* Use PCFShadowMap instead of PCFSoftShadowMap for better performance */
+        camera={{ position: [0, 6, 14], fov: 42 }}
+        dpr={[0.8, 1.2]} /* Further limit pixel ratio for better performance */
+        performance={{ min: 0.6 }} /* Allow more aggressive quality reduction for performance */
+      >
         <color attach="background" args={["#87ceeb"]} /> {/* Sky blue background */}
         <Suspense fallback={null}>
-          <Physics debug>
+          <Physics>
             <Experience />
           </Physics>
         </Suspense>
