@@ -19,6 +19,26 @@
         </div>
       </div>
     </div>
-    <script type="module" src="./src/main.jsx"></script>
+    <script>
+      // This script will dynamically load the bundled JavaScript file
+      window.addEventListener('DOMContentLoaded', function() {
+        // Create a script element
+        var script = document.createElement('script');
+        script.type = 'module';
+        
+        // Try to load the bundled JavaScript file
+        script.src = './assets/main-C2BHDb7I.js';
+        
+        // Append the script to the document
+        document.body.appendChild(script);
+        
+        // If the script fails to load, try to load the development version
+        script.onerror = function() {
+          console.log('Failed to load bundled JavaScript file, trying development version...');
+          script.src = './src/main.js';
+          document.body.appendChild(script);
+        };
+      });
+    </script>
   </body>
 </html>
