@@ -10,6 +10,15 @@ export default defineConfig({
       input: {
         main: './index.html',
       },
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          three: ['three'],
+          fiber: ['@react-three/fiber'],
+          drei: ['@react-three/drei'],
+          rapier: ['@react-three/rapier'],
+        },
+      },
     },
   },
 })
