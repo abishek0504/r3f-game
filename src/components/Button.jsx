@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CylinderCollider } from '@react-three/rapier';
 import * as THREE from 'three';
@@ -6,7 +6,7 @@ import * as THREE from 'three';
 // Game state management
 import { useGameStore } from '../store/useGameStore';
 
-export function Button({ position, height = 0.2, radius = 0.5, buttonId, requiredHeight = 0.5 }) {
+export function Button({ position, height = 0.1, radius = 0.6, buttonId }) {
   const buttonRef = useRef();
   const baseRef = useRef();
   const [isPressed, setIsPressed] = useState(false);
@@ -42,9 +42,9 @@ export function Button({ position, height = 0.2, radius = 0.5, buttonId, require
     <group position={position}>
       {/* Base cylinder */}
       <RigidBody type="fixed" colliders={false} ref={baseRef}>
-        <CylinderCollider args={[height, radius]} />
+        <CylinderCollider args={[height-0.1, radius * 1.1]} /> {/* Wider collider at the bottom */}
         <mesh receiveShadow castShadow>
-          <cylinderGeometry args={[radius, radius, height, 32]} />
+          <cylinderGeometry args={[radius, radius * 1.3, height, 32]} /> {/* Wider at the bottom for easier crate pushing */}
           <meshStandardMaterial color="#555555" />
         </mesh>
       </RigidBody>
@@ -73,7 +73,7 @@ export function Button({ position, height = 0.2, radius = 0.5, buttonId, require
   );
 }
 
-export function ButtonPlatform({ position, height, radius = 1, buttonId, requiredHeight = 0.5 }) {
+export function ButtonPlatform({ position, height, radius = 1, buttonId }) {
   return (
     <group position={position}>
       {/* Platform cylinder */}
@@ -89,7 +89,6 @@ export function ButtonPlatform({ position, height, radius = 1, buttonId, require
       <Button
         position={[0, height, 0]}
         buttonId={buttonId}
-        requiredHeight={requiredHeight}
       />
     </group>
   );

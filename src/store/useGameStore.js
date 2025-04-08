@@ -15,6 +15,22 @@ export const useGameStore = create(
     phase: 'menu', // 'menu', 'playing', 'game-over', 'level-complete'
     stage: 1, // Current stage/level
 
+    // UI and transition state
+    message: '', // Message to display to the player
+    showMessage: false, // Whether to show the message
+    isTransitioning: false, // Whether we're in the middle of a level transition
+    messageTimeout: null, // Timeout ID for hiding messages
+
+    // Date proposal state
+    dateProposalState: {
+      noClickCount: 0,
+      bothButtonsYes: false,
+      dateAccepted: false
+    },
+
+    // Fall detection
+    hasFallen: false,
+
     // Player state
     playerPosition: [0, 1, 0], // [x, y, z]
     playerRotation: [0, 0, 0], // [x, y, z]
@@ -67,13 +83,21 @@ export const useGameStore = create(
       goal: { position: [8, 0.5, 8], isReached: false },
     }),
 
-    nextStage: () => set((state) => ({
-      stage: state.stage + 1,
-      phase: 'playing',
-      playerPosition: [0, 1, 0],
-      playerRotation: [0, 0, 0],
-      // Reset other state for the next level
-    })),
+    nextStage: () => set((state) => {
+      // Moving to stage 2, position the player on the ground
+      const newStage = state.stage + 1;
+
+      return {
+        stage: newStage,
+        phase: 'playing',
+        playerPosition: [0, 1, 0], // Always position at y=1 (ground level)
+        playerRotation: [0, 0, 0],
+        // Reset other state for the next level
+        message: "",
+        showMessage: false,
+        isTransitioning: false
+      };
+    }),
 
     gameOver: () => set({ phase: 'game-over' }),
 
@@ -120,11 +144,228 @@ export const useGameStore = create(
         return { ...door, isOpen };
       });
 
+      // Check if both button-1 and button-2 are pressed to advance to level 2
+      const button1 = updatedPressurePlates.find(plate => plate.id === 'button-1');
+      const button2 = updatedPressurePlates.find(plate => plate.id === 'button-2');
+
+      if (button1?.isPressed && button2?.isPressed) {
+        // Show congratulatory message and reset duck position immediately
+        // Don't set isTransitioning to avoid the blue flash
+        set({
+          playerPosition: [0, 1, 1], // Reset duck position
+          playerRotation: [0, 0, 0], // Reset duck rotation
+          message: "Good Job Bubba !! <3",
+          showMessage: true,
+          // No isTransitioning flag to avoid color flashes
+        });
+
+        // Both buttons are pressed, trigger level completion after a short delay
+        setTimeout(() => {
+          // First, hide the message
+          set({
+            showMessage: false
+          });
+
+          // After a short delay to allow message fade-out, change the level
+          // but don't set isTransitioning to avoid color flashes
+          setTimeout(() => {
+            // Change the stage directly without transition
+            set({
+              stage: get().stage + 1,
+              message: "", // Clear the message
+              showMessage: false // Ensure message is hidden
+              // No isTransitioning flag at all to avoid color flashes
+            });
+          }, 300); // Longer delay for smoother transition
+        }, 6000); // 6 second delay before starting transition
+      }
+
       return {
         pressurePlates: updatedPressurePlates,
         doors: updatedDoors
       };
     }),
+
+    // Reset player position (used when falling off stage)
+    resetPlayerPosition: (message = '') => {
+      const state = get();
+
+      // Clear any existing message timeout
+      if (state.messageTimeout) {
+        clearTimeout(state.messageTimeout);
+      }
+
+      // Update position and show message
+      set({
+        playerPosition: [0, state.stage === 2 ? 3 : 1, 1],
+        playerRotation: [0, 0, 0],
+        message: message,
+        showMessage: message !== '',
+        hasFallen: false
+      });
+
+      // Only set a timeout if there's a message
+      if (message !== '') {
+        // Hide message after 6 seconds (consistent with stage 2 messages)
+        const timeoutId = setTimeout(() => {
+          set({ showMessage: false, messageTimeout: null });
+        }, 6000);
+
+        // Store the timeout ID
+        set({ messageTimeout: timeoutId });
+      }
+    },
+
+    // Handle date proposal responses
+    handleDateResponse: (response) => {
+      const state = get();
+
+      // Clear any existing message timeout
+      if (state.messageTimeout) {
+        clearTimeout(state.messageTimeout);
+      }
+
+      if (response === 'yes') {
+        // Player said yes
+        set({
+          message: "Yay! I love you bubba!! Oooooma  <3 ",
+          showMessage: true,
+          dateProposalState: {
+            ...state.dateProposalState,
+            dateAccepted: true
+          }
+        });
+
+        // Hide message after 8 seconds and store the timeout ID
+        const timeoutId = setTimeout(() => {
+          set({ showMessage: false, messageTimeout: null });
+        }, 8000);
+
+        // Store the timeout ID
+        set({ messageTimeout: timeoutId });
+      } else {
+        // Player said no - get the appropriate message based on click count
+        const noClickCount = state.dateProposalState.noClickCount + 1;
+        const noMessages = [
+          "That was clearly a misclick. No worries. Try again.",
+          "I'll just pretend I didn't see that.",
+          "Error: 'No' is not a valid input. Please select 'Yes'.",
+          "Initiating quantum recalculation… Surely you meant 'Yes'?",
+          "Nice try, but the algorithm is biased toward love.",
+          "Every time you click 'No,' a duck forgets how to quack.",
+          "eeeeeeeeeee",
+          "404: Yes not found. Reattempting...",
+          "You've activated sad mode 😢 \nTry again?",
+          "Please? I already told my grandma we're going.",
+          "Nice joke. Now seriously, hit yes.",
+          "AI detected sarcasm. Redirecting to YES…",
+          "Simulating alternate reality where you said Yes...",
+          "That's okay… I'll just sit here and wait. Forever.",
+          "You said no… but your heart said yes, right?",
+          "I'll ask again, but this time with boba eyes 🥺",
+          "Okay. But just know… you're breaking my Minecraft bed.",
+          "*dramatic gasp* HOW COULD YOU.",
+          "Cool cool cool… totally fine… I didn't cry or anything.",
+          "Say no again and I unleash the raccoons.",
+          "Every time you click 'No,' a baby carrot dies.",
+          "That's fine. I didn't want to go anyway. *closes 47 tabs of date ideas*",
+          "You've unlocked my final form: Sad Ninja Mode 🥷💔",
+          "Even Naruto didn't give up on Sasuke… and you're giving up on me?!",
+          "Wow. I gave you a love story and you said no like Juliet's dad.",
+          "Are you saying baby, baby, baby… no?",
+          "You said no… but my ninja way says to never give up!",
+          "Are you using a genjutsu? Because this reality doesn't make sense.",
+          "The next no click leads to a thousand years of pain.",
+          "Bubba I'll do it fr",
+          "Ain't no way",
+          "This hurts more than when Zayn left 😩",
+          "Story of my life 🎶 ask them out 🎵 they click no.",
+          "Let me give you a helping hand <3"
+        ];
+
+        // Get message based on click count (capped at array length)
+        const messageIndex = Math.min(noClickCount - 1, noMessages.length - 1);
+        const message = noMessages[messageIndex];
+
+        // Check if we've reached the last message (both buttons become yes)
+        const bothButtonsYes = messageIndex === noMessages.length - 1;
+
+        // Reset player position to the center of the stage and show message
+        // We're staying in Stage 2, but now on the ground level
+        set({
+          playerPosition: [0, 1, 2], // Always position at y=1 for the ground level
+          playerRotation: [0, 0, 0],
+          message: message,
+          showMessage: true,
+          dateProposalState: {
+            ...state.dateProposalState,
+            noClickCount: noClickCount,
+            bothButtonsYes: bothButtonsYes
+          }
+        });
+
+        // Hide message after 6 seconds and store the timeout ID
+        const timeoutId = setTimeout(() => {
+          set({ showMessage: false, messageTimeout: null });
+        }, 6000);
+
+        // Store the timeout ID
+        set({ messageTimeout: timeoutId });
+      }
+    },
+
+    // Check if player has fallen off the stage
+    checkPlayerFall: () => {
+      const { playerPosition, messageTimeout, stage } = get();
+
+      // Check if player has fallen off the stage (y position too low or too far from center)
+      const distanceFromCenter = Math.sqrt(
+        playerPosition[0] * playerPosition[0] +
+        playerPosition[2] * playerPosition[2]
+      );
+
+      // Player has fallen if they're below y=-1 or too far from the center (beyond stage radius)
+      const STAGE_RADIUS = 10;
+      const FALL_THRESHOLD_Y = -1; // Fall if y position is at or below this value (matches wireframe at y=-1)
+      const FALL_THRESHOLD_DISTANCE = STAGE_RADIUS + 5; // Fall if distance from center exceeds this value (matches wider wireframe)
+
+      // Check if player has fallen based on position
+      const hasFallenOff = (
+        playerPosition[1] <= FALL_THRESHOLD_Y ||
+        distanceFromCenter > FALL_THRESHOLD_DISTANCE
+      );
+
+      if (hasFallenOff) {
+        console.log('Player has fallen off the stage! Resetting position...');
+        console.log('Position:', playerPosition, 'Distance from center:', distanceFromCenter);
+        set({ hasFallen: true });
+
+        // Clear any existing message timeout
+        if (messageTimeout) {
+          clearTimeout(messageTimeout);
+        }
+
+        // Reset player position with a message
+        // Position depends on the current stage
+        const resetPosition = stage === 2 ? [0, 3, 0] : [0, 1, 0];
+
+        set({
+          playerPosition: resetPosition,
+          playerRotation: [0, 0, 0],
+          message: "Oops I think you fell! \n cafeFell for me :3",
+          showMessage: true,
+          hasFallen: false
+        });
+
+        // Hide message after 6 seconds and store the timeout ID
+        const timeoutId = setTimeout(() => {
+          set({ showMessage: false, messageTimeout: null });
+        }, 6000);
+
+        // Store the timeout ID
+        set({ messageTimeout: timeoutId });
+      }
+    },
 
     checkPressurePlates: () => {
       const { crates, pressurePlates, doors } = get();

@@ -5,9 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React</title>
+    <style>
+      html, body, #root, canvas {
+        background-color: #A5D8FF !important; /* Very light blue background */
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="background-color: #A5D8FF;">
+    <div id="root">
+      <!-- Loading screen that will be replaced by React -->
+      <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #A5D8FF; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.5s ease;">
+        <div style="color: white; font-family: Arial, sans-serif; text-align: center;">
+          <div style="font-size: 24px;">Loading...</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

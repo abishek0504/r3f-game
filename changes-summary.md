@@ -141,10 +141,102 @@ if (jump && onFloor) {
 
 ## Game Mechanics Implementation
 
+### 1. Level Progression System
+   - Implemented a level progression system in the game store
+   - When both buttons are pressed simultaneously, the game advances to level 2
+   - Level 2 has no buttons, platforms, or crates - just the basic environment
+   - Added conditional rendering based on the current level
+   - Reset duck's position when advancing to the next level
+   - Display a visually appealing "Good Job Bubba !! <3" message
+
+```js
+// Check if both button-1 and button-2 are pressed to advance to level 2
+const button1 = updatedPressurePlates.find(plate => plate.id === 'button-1');
+const button2 = updatedPressurePlates.find(plate => plate.id === 'button-2');
+
+if (button1?.isPressed && button2?.isPressed) {
+  // Both buttons are pressed, trigger level completion after a short delay
+  setTimeout(() => {
+    get().nextLevel();
+  }, 1000); // 1 second delay before advancing to next level
+}
+```
+
+```jsx
+// Conditional rendering in World component
+{stage === 1 && (
+  <>
+    {/* Level 1 elements (crates, button platforms) */}
+  </>
+)}
+```
+
+### 2. Improved Button and Crate Physics
+   - Added tapered base to button cylinders for easier crate pushing
+   - Widened the bottom of button bases by 30% (radius * 1.3)
+   - Updated colliders to match the tapered shape
+   - Kept the button top flat (not tapered) for proper appearance
+   - Increased crate friction from default to 0.8 for better control
+   - These changes make it easier to push crates onto buttons
+
+```jsx
+// Tapered button base for easier crate pushing
+<mesh receiveShadow castShadow>
+  <cylinderGeometry args={[radius, radius * 1.3, height, 32]} /> {/* Wider at the bottom */}
+  <meshStandardMaterial color="#555555" />
+</mesh>
+
+// Increased crate friction
+<RigidBody type="dynamic" position={[3, GROUND_LEVEL + 0.5, 2]} restitution={0.2} friction={0.8} colliders={false}>
+  <CrateInstance scale={511.5} />
+  <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+</RigidBody>
+```
+
+### 3. Congratulatory Message System
+   - Created a visually appealing LevelMessage component
+   - Shows "Good Job Bubba !! <3" when both buttons are pressed
+   - Includes animated hearts rotating around the text
+   - Text has gentle floating, rotation, and pulsing animations
+   - Message appears for 3 seconds before transitioning to level 2
+
+```jsx
+// LevelMessage component with animations
+export function LevelMessage() {
+  // ... state and refs ...
+
+  // Bouncing animation
+  useFrame((state) => {
+    if (textRef.current && showMessage) {
+      // Gentle floating motion
+      const t = state.clock.getElapsedTime();
+      textRef.current.position.y = Math.sin(t * 2) * 0.1;
+
+      // Gentle rotation
+      textRef.current.rotation.z = Math.sin(t * 1.5) * 0.05;
+
+      // Pulsing scale
+      const pulse = 1 + Math.sin(t * 3) * 0.05;
+      textRef.current.scale.set(pulse, pulse, pulse);
+    }
+
+    // Rotate the hearts around the text
+    if (groupRef.current && showMessage) {
+      groupRef.current.rotation.y = state.clock.getElapsedTime() * 0.5;
+    }
+  });
+
+  // ... render hearts and text ...
+}
+```
+
 1. **Added Button Platforms**
    - Created two button platforms at different heights:
-     - First platform: 2 crates high (height=4 units)
-     - Second platform: 3 crates high (height=6 units)
+     - Right platform (positive x): 2.5 crates high (height=5 units)
+     - Left platform (negative x): 3 crates high (height=6 units)
+   - Positioned platforms closer to the center of the stage:
+     - Right platform: position [4, 0, 0]
+     - Left platform: position [-4, 0, 0]
    - Implemented pressure-sensitive buttons on top of each platform
    - Buttons change color when pressed (red to green)
 

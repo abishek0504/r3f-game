@@ -4,6 +4,7 @@ import { useKeyboardControls } from '@react-three/drei';
 import { RigidBody, CylinderCollider } from '@react-three/rapier';
 import { CharacterWithPhysics } from './models/Character';
 import * as THREE from 'three';
+import { useGameStore } from '../store/useGameStore';
 
 export function CharacterController() {
   const characterRef = useRef();
@@ -11,6 +12,14 @@ export function CharacterController() {
   const [smoothedCameraPosition] = useState(() => new THREE.Vector3(10, 10, 10));
   const [smoothedCameraTarget] = useState(() => new THREE.Vector3());
   const [isOnFloor, setIsOnFloor] = useState(false);
+  const [hasFallen, setHasFallen] = useState(false);
+
+  // Get player position and game state from game store
+  const playerPosition = useGameStore(state => state.playerPosition);
+  const playerRotation = useGameStore(state => state.playerRotation);
+  const showMessage = useGameStore(state => state.showMessage);
+  const stage = useGameStore(state => state.stage);
+  const resetPlayerPosition = useGameStore(state => state.resetPlayerPosition);
 
   // We'll use velocity checks for floor detection
 
@@ -19,8 +28,8 @@ export function CharacterController() {
 
   // Character movement parameters
   const ROTATION_SPEED = 5;
-  const JUMP_FORCE = 2.5;
-  const MAX_VELOCITY = 3; // Maximum velocity for the character
+  const JUMP_FORCE = stage === 2 ? 1.5 : 2.5; // Reduced jump force in stage 2 for better control on floating platform
+  const MAX_VELOCITY = stage === 2 ? 2 : 3; // Reduced max velocity in stage 2 for better control
 
   // We'll use a simple velocity check for floor detection
 
@@ -29,6 +38,27 @@ export function CharacterController() {
     // Set initial state to false
     setIsOnFloor(false);
   }, []);
+
+  // Effect to update character position when playerPosition changes
+  useEffect(() => {
+    if (rigidBodyRef.current && showMessage) {
+      // Reset position when message is shown
+      rigidBodyRef.current.setTranslation(
+        { x: playerPosition[0], y: playerPosition[1], z: playerPosition[2] },
+        true
+      );
+
+      // Reset rotation when message is shown
+      rigidBodyRef.current.setRotation(
+        { x: playerRotation[0], y: playerRotation[1], z: playerRotation[2], w: 1 },
+        true
+      );
+
+      // Reset velocity
+      rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      rigidBodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    }
+  }, [playerPosition, playerRotation, showMessage]);
 
   // Function to check if character is on floor using velocity
   const checkIfOnFloor = () => {
@@ -98,7 +128,7 @@ export function CharacterController() {
     }
 
     // Handle jumping - only when on floor
-    console.log('Jump key:', jump, 'isOnFloor:', isOnFloor, 'onFloor:', onFloor);
+    // console.log('Jump key:', jump, 'isOnFloor:', isOnFloor, 'onFloor:', onFloor);
     if (jump && onFloor) {
       // Apply jump force
       console.log('Jumping!');
@@ -149,13 +179,46 @@ export function CharacterController() {
       }
     }
 
-    // Camera follow
+    // Camera follow - adjust for stage 2 to better show the floating platform
     const characterPosition = rigidBodyRef.current.translation();
+
+    // Check if player has fallen off the stage
+    const STAGE_RADIUS = 10;
+    const FALL_THRESHOLD_Y = -1; // Fall if y position is at or below this value (matches wireframe at y=-1)
+    const FALL_THRESHOLD_DISTANCE = STAGE_RADIUS + 5; // Fall if distance from center exceeds this value
+
+    // Calculate distance from center
+    const distanceFromCenter = Math.sqrt(
+      characterPosition.x * characterPosition.x +
+      characterPosition.z * characterPosition.z
+    );
+
+    // Check if player has fallen
+    const hasFallenOff = (
+      characterPosition.y <= FALL_THRESHOLD_Y ||
+      distanceFromCenter > FALL_THRESHOLD_DISTANCE
+    );
+
+    if (hasFallenOff && !hasFallen) {
+      console.log('Player has fallen off the stage! Resetting position...');
+      console.log('Position:', characterPosition, 'Distance from center:', distanceFromCenter);
+
+      // Set the fallen state to prevent continuous resets
+      setHasFallen(true);
+
+      // Reset player position with a message
+      resetPlayerPosition("Oops I think you fell! Fell for me :3");
+
+      // Reset the fallen state after a delay
+      setTimeout(() => {
+        setHasFallen(false);
+      }, 2000);
+    }
 
     const cameraPosition = new THREE.Vector3();
     cameraPosition.copy(new THREE.Vector3(characterPosition.x, characterPosition.y, characterPosition.z));
-    cameraPosition.z += 8;
-    cameraPosition.y += 5;
+    cameraPosition.z += 10; // Increased distance for zoomed out view
+    cameraPosition.y += stage === 2 ? 4.5 : 3.5; // Adjusted camera height for zoomed out view
 
     const cameraTarget = new THREE.Vector3();
     cameraTarget.copy(new THREE.Vector3(characterPosition.x, characterPosition.y, characterPosition.z));

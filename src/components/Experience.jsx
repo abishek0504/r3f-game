@@ -1,11 +1,22 @@
 import { Environment } from "@react-three/drei";
-import { Sky, Preload, PerformanceMonitor } from "@react-three/drei";
+import { Preload, PerformanceMonitor } from "@react-three/drei";
 import CharacterController from "./CharacterController";
 import { World } from "./World";
+import { LevelMessage } from "./LevelMessage";
+import { useGameStore } from "../store/useGameStore";
+import { SimplePreloader } from "./SimplePreloader";
+import * as THREE from "three";
+
 
 export const Experience = () => {
+  // Get the current stage
+  const stage = useGameStore(state => state.stage);
+
+  // No opacity transitions to avoid flashes
+
   return (
-    <>
+    <group>
+      {/* No opacity transitions to avoid flashes */}
       {/* PERFORMANCE MONITORING */}
       <PerformanceMonitor
         onDecline={(fps) => {
@@ -15,15 +26,21 @@ export const Experience = () => {
       />
 
       {/* ENVIRONMENT */}
-      <Sky
-        distance={300000} /* Reduced distance for better performance */
-        sunPosition={[5, 1, 0]}
-        inclination={0.6}
-        azimuth={0.25}
-        rayleigh={0.5}
-        turbidity={8}
-        segments={20} /* Reduced segments for better performance */
-      />
+      {/* Always render the Sky component */}
+      {/* Fixed color sky to match #A5D8FF */}
+      <color attach="background" args={["#A5D8FF"]} />
+
+      {/* Create a large sphere to simulate the sky with exact color */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[5000, 32, 32]} attach="geometry" />
+        <meshBasicMaterial
+          color="#A5D8FF"
+          side={THREE.BackSide}
+          fog={false}
+          toneMapped={false}
+          attach="material"
+        />
+      </mesh>
 
       {/* LIGHTS */}
       <Environment preset="sunset" />
@@ -32,7 +49,7 @@ export const Experience = () => {
         position={[5, 8, 5]}
         intensity={0.8}
         castShadow
-        color={"#ffffff"}
+        color={"#A5D8FF"} /* Very light blue color */
         shadow-mapSize={[512, 512]} /* Reduced for better performance */
         shadow-camera-far={25} /* Reduced for better performance */
         shadow-camera-left={-12}
@@ -50,8 +67,14 @@ export const Experience = () => {
         <CharacterController />
       </World>
 
+      {/* LEVEL MESSAGE - Only for Stage 1 */}
+      {stage === 1 && <LevelMessage />}
+
       {/* PRELOAD ASSETS */}
       <Preload all />
-    </>
+
+      {/* PRELOADER - Handles loading screen */}
+      <SimplePreloader />
+    </group>
   );
 };

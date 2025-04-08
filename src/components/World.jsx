@@ -3,19 +3,26 @@ import { Cylinder, ContactShadows } from '@react-three/drei';
 import { TreeInstance } from './models/SimpleTrees';
 import { GrassField } from './models/GrassWithShadows';
 import { Button } from './Button';
+import { DateButton } from './DateButton';
+import { DateProposalText } from './DateProposalText';
 import { CrateInstance } from './models/Crate';
 import { RigidBody, CuboidCollider, CylinderCollider } from '@react-three/rapier';
+import { useGameStore } from '../store/useGameStore';
 
 // World component to organize all game elements with proper alignment
 export function World({ children }) {
-  // Get the current state of the canvas if needed
-  // const { scene } = useThree();
+  // Get the current game stage
+  const stage = useGameStore(state => state.stage);
+
+  // No transitions or opacity changes to avoid flashes
 
   // Define the ground level - all objects will be positioned relative to this
   const GROUND_LEVEL = 0;
 
   // Define the stage radius
   const STAGE_RADIUS = 10;
+
+  // Current level is: ${stage}
 
   return (
     <group>
@@ -27,9 +34,9 @@ export function World({ children }) {
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
       >
-        <planeGeometry args={[50, 50]} /> {/* Reduced from 100x100 to 50x50 */}
+        <planeGeometry args={[70, 40]} /> {/* Wider and less long (70x40) */}
         <meshStandardMaterial
-          color="#4d80e4"
+          color="#4d80e4" /* Original water color */
           metalness={0.2}
           roughness={0.7}
           transparent={true}
@@ -45,6 +52,8 @@ export function World({ children }) {
         </Cylinder>
       </RigidBody>
 
+      {/* Fall detection is handled in CharacterController.jsx */}
+
       {/* CONTACT SHADOWS */}
       <ContactShadows
         position={[0, GROUND_LEVEL + 0.001, 0]}
@@ -57,65 +66,64 @@ export function World({ children }) {
         frames={1} /* Render once for better performance */
       />
 
-      {/* CRATES */}
-      {/* Single crates */}
-      <RigidBody type="dynamic" position={[3, GROUND_LEVEL + 0.5, 2]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.5} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+      {/* CRATES - Only in Level 1 */}
+      {stage === 1 && (
+        <>
+          {/* Single crates */}
+          <RigidBody type="dynamic" position={[3, GROUND_LEVEL + 0.5, 2]} restitution={0.2} friction={0.8} colliders={false}>
+            <CrateInstance scale={511.5} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      <RigidBody type="dynamic" position={[-2, GROUND_LEVEL + 0.5, 3]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.2} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          <RigidBody type="dynamic" position={[-2, GROUND_LEVEL + 0.5, 3]} restitution={0.2} friction={0.8} colliders={false}>
+            <CrateInstance scale={511.2} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      <RigidBody type="dynamic" position={[4, GROUND_LEVEL + 0.5, -2]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.8} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          <RigidBody type="dynamic" position={[3, GROUND_LEVEL + 1.5, 2]} restitution={0.2} friction={0.8} colliders={false}>
+            <CrateInstance scale={511.8} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      {/* Crate stack 1 */}
-      <RigidBody type="dynamic" position={[-4, GROUND_LEVEL + 0.5, -3]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.3} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          {/* Crate stack 1 */}
+          <RigidBody type="dynamic" position={[-2, GROUND_LEVEL + 1.5, 3]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.3} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      <RigidBody type="dynamic" position={[-4, GROUND_LEVEL + 1.5, -3]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.1} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          {/* Crate stack 2 */}
+          <RigidBody type="dynamic" position={[5, GROUND_LEVEL + 0.5, 5]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.4} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      {/* Crate stack 2 */}
-      <RigidBody type="dynamic" position={[5, GROUND_LEVEL + 0.5, 5]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.4} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          <RigidBody type="dynamic" position={[5, GROUND_LEVEL + 1.5, 5]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.2} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      <RigidBody type="dynamic" position={[5, GROUND_LEVEL + 1.5, 5]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.2} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          <RigidBody type="dynamic" position={[5, GROUND_LEVEL + 2.5, 5]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.0} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      <RigidBody type="dynamic" position={[5, GROUND_LEVEL + 2.5, 5]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.0} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          {/* Crate row */}
+          <RigidBody type="dynamic" position={[0, GROUND_LEVEL + 0.5, 6]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.3} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      {/* Crate row */}
-      <RigidBody type="dynamic" position={[0, GROUND_LEVEL + 0.5, 6]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.3} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          <RigidBody type="dynamic" position={[2, GROUND_LEVEL + 0.5, 6]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.3} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
 
-      <RigidBody type="dynamic" position={[2, GROUND_LEVEL + 0.5, 6]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.3} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
-
-      <RigidBody type="dynamic" position={[-2, GROUND_LEVEL + 0.5, 6]} restitution={0.2} colliders={false}>
-        <CrateInstance scale={511.3} />
-        <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
-      </RigidBody>
+          <RigidBody type="dynamic" position={[-2, GROUND_LEVEL + 0.5, 6]} restitution={0.2} colliders={false}>
+            <CrateInstance scale={511.3} />
+            <CuboidCollider args={[0.4, 0.4, 0.4]} position={[0, 0, 0]} />
+          </RigidBody>
+        </>
+      )}
 
       {/* TREES */}
       <RigidBody type="fixed" position={[-5, GROUND_LEVEL, -5]} colliders={false}>
@@ -155,42 +163,58 @@ export function World({ children }) {
       <GrassField patchCount={10} radius={3.2} scale={1.6} position={[3, GROUND_LEVEL, -3]} />
       <GrassField patchCount={6} radius={2} scale={1.8} position={[-3, GROUND_LEVEL, -4]} />
 
-      {/* BUTTON PLATFORMS */}
-      {/* Platform 1 - 2 crates high */}
-      <group position={[6, GROUND_LEVEL, 0]}>
-        {/* Platform cylinder */}
-        <RigidBody type="fixed" colliders={false}>
-          <CylinderCollider args={[2, 1]} />
-          <mesh receiveShadow castShadow>
-            <cylinderGeometry args={[1, 1, 4, 32]} />
-            <meshStandardMaterial color="#777777" />
-          </mesh>
-        </RigidBody>
+      {/* BUTTON PLATFORMS - Only in Level 1 */}
+      {stage === 1 && (
+        <>
+          {/* Platform 1 (RIGHT) - 2 crates high (moved closer to center) */}
+          <group position={[4, GROUND_LEVEL, 0]}>
+            {/* Platform cylinder */}
+            <RigidBody type="fixed" colliders={false}>
+              <CylinderCollider args={[2, 1]} />
+              <mesh receiveShadow castShadow>
+                <cylinderGeometry args={[1, 1, 4, 32]} />
+                <meshStandardMaterial color="#777777" />
+              </mesh>
+            </RigidBody>
 
-        {/* Button on top */}
-        <Button
-          position={[0, 2, 0]}
-          buttonId="button-1"
-        />
-      </group>
+            {/* Button on top */}
+            <Button
+              position={[0, 2, 0]}
+              buttonId="button-1"
+            />
+          </group>
 
-      {/* Platform 2 - 3 crates high */}
-      <group position={[-6, GROUND_LEVEL, 0]}>
-        {/* Platform cylinder */}
-        <RigidBody type="fixed" colliders={false}>
-          <CylinderCollider args={[3, 1]} />
-          <mesh receiveShadow castShadow>
-            <cylinderGeometry args={[1, 1, 6, 32]} />
-            <meshStandardMaterial color="#777777" />
-          </mesh>
-        </RigidBody>
+          {/* Platform 2 (LEFT) - 3 crates high */}
+          <group position={[-4, GROUND_LEVEL, 0]}>
+            {/* Platform cylinder */}
+            <RigidBody type="fixed" colliders={false}>
+              <CylinderCollider args={[3, 1]} />
+              <mesh receiveShadow castShadow>
+                <cylinderGeometry args={[1, 1, 6, 32]} />
+                <meshStandardMaterial color="#777777" />
+              </mesh>
+            </RigidBody>
 
-        {/* Button on top */}
-        <Button
-          position={[0, 3, 0]}
-          buttonId="button-2"
-        />
-      </group>
+            {/* Button on top */}
+            <Button
+              position={[0, 3, 0]}
+              buttonId="button-2"
+            />
+          </group>
+        </>
+      )}
+
+      {/* DateProposalText for both stages - handles all messages */}
+      <DateProposalText />
+
+      {/* STAGE 2 ELEMENTS - Simplified for better performance */}
+      {stage === 2 && (
+        <>
+          {/* Date proposal buttons - directly on the ground */}
+          <DateButton position={[-2, GROUND_LEVEL + 0.5, 0.5]} buttonType="yes" />
+          <DateButton position={[2, GROUND_LEVEL + 0.5, 0.5]} buttonType="no" />
+        </>
+      )}
 
       {/* CHARACTER AND OTHER ELEMENTS */}
       {children}
